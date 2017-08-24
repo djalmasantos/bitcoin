@@ -943,7 +943,7 @@ UniValue sendmany(const JSONRPCRequest& request)
         return NullUniValue;
     }
 
-    if (request.fHelp || request.params.size() < 2 || request.params.size() > 8)
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 9)
         throw std::runtime_error(
             "sendmany \"fromaccount\" {\"address\":amount,...} ( minconf \"comment\" [\"address\",...] replaceable conf_target \"estimate_mode\")\n"
             "\nSend multiple times. Amounts are double-precision floating point numbers."
@@ -971,7 +971,8 @@ UniValue sendmany(const JSONRPCRequest& request)
             "       \"UNSET\"\n"
             "       \"ECONOMICAL\"\n"
             "       \"CONSERVATIVE\"\n"
-             "\nResult:\n"
+            "9. custom_change_address (string, optional) If no address is specified here the change will go to newly generated address"  
+            "\nResult:\n"
             "\"txid\"                   (string) The transaction id for the send. Only 1 transaction is created regardless of \n"
             "                                    the number of addresses.\n"
             "\nExamples:\n"
@@ -1021,6 +1022,17 @@ UniValue sendmany(const JSONRPCRequest& request)
         }
     }
 
+    // coin control: send change to custom address
+    // let's inject our own destinatin change here in coin_control.destChange
+    // and the magic will be done in CWallet::CreateTransaction (at line #2697)
+    if (!request.params[8].isNull()) {
+        CBitcoinAddress change_address(request.params[8].get_str());
+        if (!change_address.IsValid()) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ")+request.params[8].get_str());
+        }
+        coin_control.destChange = GetScriptForDestination(change_address.Get());
+    }
+
     std::set<CBitcoinAddress> setAddress;
     std::vector<CRecipient> vecSend;
 
@@ -1052,7 +1064,7 @@ UniValue sendmany(const JSONRPCRequest& request)
         CRecipient recipient = {scriptPubKey, nAmount, fSubtractFeeFromAmount};
         vecSend.push_back(recipient);
     }
-
+    
     EnsureWalletIsUnlocked(pwallet);
 
     // Check funds
