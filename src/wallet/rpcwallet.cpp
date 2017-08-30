@@ -1024,13 +1024,15 @@ UniValue sendmany(const JSONRPCRequest& request)
 
     // coin control: send change to custom address
     // let's inject our own destinatin change here in coin_control.destChange
-    // and the magic will be done in CWallet::CreateTransaction (at line #2697)
+    // and the magic will be done in CWallet::CreateTransaction
     if (!request.params[8].isNull()) {
         CBitcoinAddress change_address(request.params[8].get_str());
         if (!change_address.IsValid()) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ")+request.params[8].get_str());
         }
-        coin_control.destChange = GetScriptForDestination(change_address.Get());
+        // pass the change address to the coin control
+        coin_control.destChange = change_address.Get();
+        //coin_control.destChange = GetScriptForDestination(change_address.Get()); //  isso aqui era a merda!!
     }
 
     std::set<CBitcoinAddress> setAddress;
