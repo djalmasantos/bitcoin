@@ -419,7 +419,7 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
         return NullUniValue;
     }
 
-    if (request.fHelp || request.params.size() < 2 || request.params.size() > 8)
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 9)
         throw std::runtime_error(
             "sendtoaddress \"address\" amount ( \"comment\" \"comment_to\" subtractfeefromamount replaceable conf_target \"estimate_mode\")\n"
             "\nSend an amount to a given address.\n"
@@ -440,6 +440,7 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
             "       \"UNSET\"\n"
             "       \"ECONOMICAL\"\n"
             "       \"CONSERVATIVE\"\n"
+            "9. custom_change_address (string, optional) If no address is specified here the change will go to newly generated address in the wallet"
             "\nResult:\n"
             "\"txid\"                  (string) The transaction id.\n"
             "\nExamples:\n"
@@ -487,6 +488,20 @@ UniValue sendtoaddress(const JSONRPCRequest& request)
         }
     }
 
+    // send the change to a custom address
+    if (!request.params[8].isNull()) {
+        CBitcoinAddress change_address(request.params[8].get_str());
+        if (!change_address.IsValid()) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ")+request.params[8].get_str());
+        }
+        // // check the address belongs to the wallet
+        // CKeyID keyid;
+        // change_address.GetKeyID(keyid);
+        // if (!pwallet->HaveKey(keyid)) {
+        //     throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("The address for the change is not part of this wallet: ")+request.params[8].get_str());
+        // }
+        coin_control.destChange = change_address.Get();
+    }
 
     EnsureWalletIsUnlocked(pwallet);
 
@@ -971,7 +986,7 @@ UniValue sendmany(const JSONRPCRequest& request)
             "       \"UNSET\"\n"
             "       \"ECONOMICAL\"\n"
             "       \"CONSERVATIVE\"\n"
-            "9. custom_change_address (string, optional) If no address is specified here the change will go to newly generated address"  
+            "9. custom_change_address (string, optional) If no address is specified here the change will go to newly generated address in the wallet"  
             "\nResult:\n"
             "\"txid\"                   (string) The transaction id for the send. Only 1 transaction is created regardless of \n"
             "                                    the number of addresses.\n"
