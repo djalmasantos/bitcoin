@@ -1028,6 +1028,13 @@ UniValue sendmany(const JSONRPCRequest& request)
         if (!change_address.IsValid()) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ")+request.params[8].get_str());
         }
+        // check the address belongs to the wallet
+        CKeyID keyid;
+        change_address.GetKeyID(keyid);
+        if (!pwallet->HaveKey(keyid)) {
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("The address for the change is not part of this wallet: ")+request.params[8].get_str());
+        }
+        // pass the change address to the coin control
         coin_control.destChange = change_address.Get();
     }
 
